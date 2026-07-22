@@ -25,7 +25,31 @@ const hearlink = axios.create({
 
 /*
 |--------------------------------------------------------------------------
-| Home Page
+| Helper Function - Split Full Name
+|--------------------------------------------------------------------------
+*/
+
+function splitName(fullName) {
+
+  if (!fullName) {
+    return {
+      firstName: "",
+      lastName: ""
+    };
+  }
+
+  const parts = fullName.trim().split(" ");
+
+  return {
+    firstName: parts[0] || "",
+    lastName: parts.slice(1).join(" ") || ""
+  };
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Home
 |--------------------------------------------------------------------------
 */
 
@@ -47,12 +71,30 @@ app.get("/test", (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| Get All HearLink Patients
+| Environment Variable Check
+|--------------------------------------------------------------------------
+*/
+
+app.get("/env-check", (req, res) => {
+  res.json({
+    apiConfigured: !!process.env.HEARLINK_API_KEY,
+    apiKeyLength: process.env.HEARLINK_API_KEY
+      ? process.env.HEARLINK_API_KEY.length
+      : 0,
+    apiUrl: process.env.HEARLINK_API_URL
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Get All Patients
 |--------------------------------------------------------------------------
 */
 
 app.get("/patients", async (req, res) => {
+
   try {
+
     const response = await hearlink.get("/patients");
 
     res.json(response.data);
@@ -68,20 +110,23 @@ app.get("/patients", async (req, res) => {
       success: false,
       error: error.response?.data || error.message
     });
+
   }
+
 });
 
 /*
 |--------------------------------------------------------------------------
-| Lookup Patient By Phone Number
+| Lookup Patient By Number
 |--------------------------------------------------------------------------
 |
 | Example:
-| /lookup?number=07700123456
+| /lookup?number=07776185027
 |
 */
 
 app.get("/lookup", async (req, res) => {
+
   try {
 
     const number = req.query.number;
@@ -119,7 +164,139 @@ app.get("/lookup", async (req, res) => {
       success: false,
       error: error.response?.data || error.message
     });
+
   }
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| Yeastar Contact Lookup
+|--------------------------------------------------------------------------
+|
+| Example:
+| /yeastar/contact?phone=07776185027
+|
+| Returns:
+| [
+|   {
+|     "id":"123",
+|     "first_name":"Tom",
+|     "last_name":"Regan",
+|     "phone":"07776185027"
+|   }
+| ]
+|
+*/
+
+app.get("/yeastar/contact", async (req, res) => {
+
+  try {
+
+    const phone = req.query.phone;
+
+    if (!phone) {
+      return res.status(400).json({
+        error: "phone parameter required"
+      });
+    }
+
+    const response = await hearlink.get("/patients", {
+      params: {
+        phoneNumber: phone
+      }
+    });
+
+    const patients = response.data?.data || [];
+
+    if (patients.length === 0) {
+      return res.json([]);
+    }
+
+    const patient = patients[0];
+
+    const name = splitName(patient.fullName);
+
+    return res.json([
+      {
+        id: patient.uid,
+        first_name: name.firstName,
+        last_name: name.lastName,
+        full_name: patient.fullName,
+        phone: patient.phoneNumber,
+        mobile: patient.secondaryPhoneNumber || "",
+        email: patient.emailAddress || ""
+      }
+    ]);
+
+  } catch (error) {
+
+    console.error(
+      "Yeastar Lookup Error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      error: error.response?.data || error.message
+    });
+
+  }
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| Optional CRM URL Endpoint
+|--------------------------------------------------------------------------
+*/
+
+app.get("/yeastar/contacturl", async (req, res) => {
+
+  try {
+
+    const phone = req.query.phone;
+
+    if (!phone) {
+      return res.status(400).json({
+        error: "phone parameter required"
+      });
+    }
+
+    const response = await hearlink.get("/patients", {
+      params: {
+        phoneNumber: phone
+      }
+    });
+
+    const patient = response.data?.data?.[0];
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: "Patient not found"
+      });
+    }
+
+    res.json({
+      uid: patient.uid,
+      fullName: patient.fullName
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Contact URL Error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      error: error.response?.data || error.message
+    });
+
+  }
+
 });
 
 /*
