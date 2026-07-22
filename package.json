@@ -1,5 +1,5 @@
 {
-  "name": "hearlink-yeastar",
+  "name": "hearlink-yeastar-integration",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
@@ -7,7 +7,8 @@
   },
   "dependencies": {
     "axios": "^1.7.0",
-    "dotenv": "^16.4.0",
-    "express": "^4.19.0"
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3"
   }
 }
