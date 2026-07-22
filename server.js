@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3000;
 const hearlink = axios.create({
   baseURL: process.env.HEARLINK_API_URL || "https://api.hearlink.co.uk",
   headers: {
-    Authorization: `Bearer ${process.env.HEARLINK_API_KEY}`,
+    "X-API-Key": process.env.HEARLINK_API_KEY,
     "Content-Type": "application/json"
   }
 });
