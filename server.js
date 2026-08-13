@@ -1,4 +1,4 @@
-require("dotenv").config();
+require(config();
 
 const express = require("express");
 const axios = require("axios");
@@ -45,6 +45,18 @@ function splitName(fullName) {
     lastName: parts.slice(1).join(" ") || ""
   };
 
+}
+
+/*
+|--------------------------------------------------------------------------
+| Helper Function - Normalise Phone Number
+|--------------------------------------------------------------------------
+*/
+
+function normaliseNumber(number = "") {
+  return number
+    .replace(/\s/g, "")
+    .replace(/^\+44/, "0");
 }
 
 /*
@@ -119,10 +131,6 @@ app.get("/patients", async (req, res) => {
 |--------------------------------------------------------------------------
 | Lookup Patient By Number
 |--------------------------------------------------------------------------
-|
-| Example:
-| /lookup?number=07776185027
-|
 */
 
 app.get("/lookup", async (req, res) => {
@@ -130,11 +138,10 @@ app.get("/lookup", async (req, res) => {
   try {
 
     const number = normaliseNumber(
-req.query.number ||
-req.query.phone ||
-""
-);
-``
+      req.query.number ||
+      req.query.phone ||
+      ""
+    );
 
     if (!number) {
       return res.status(400).json({
@@ -178,89 +185,59 @@ req.query.phone ||
 |--------------------------------------------------------------------------
 | Yeastar Contact Lookup
 |--------------------------------------------------------------------------
-|
-| Example:
-| /yeastar/contact?phone=07776185027
-|
-| Returns:
-| [
-|   {
-|     "id":"123",
-|     "first_name":"Tom",
-|     "last_name":"Regan",
-|     "phone":"07776185027"
-|   }
-| ]
-|
 */
 
 app.get("/yeastar/contact", async (req, res) => {
-console.log("=================================");
-console.log("YEASTAR REQUEST RECEIVED");
-console.log("QUERY:", req.query);
 
-try {
-const phone = normaliseNumber(
-req.query.phone ||
-req.query.number ||
-""
-);
+  console.log("=================================");
+  console.log("YEASTAR REQUEST RECEIVED");
+  console.log("QUERY:", req.query);
 
-console.log("NORMALISED PHONE:", phone);
+  try {
 
-if (!phone) {
-return res.status(400).json({
-error: "phone parameter required"
-});
-}
+    const phone = normaliseNumber(
+      req.query.phone ||
+      req.query.number ||
+      ""
+    );
 
-const response = await hearlink.get("/patients", {
-params: {
-phoneNumber: phone
-}
-});
+    console.log("NORMALISED PHONE:", phone);
 
-const patients = response.data?.data || [];
+    if (!phone) {
+      return res.status(400).json({
+        error: "phone parameter required"
+      });
+    }
 
-console.log("PATIENTS FOUND:", patients.length);
+    const response = await hearlink.get("/patients", {
+      params: {
+        phoneNumber: phone
+      }
+    });
 
-if (patients.length === 0) {
-return res.json([]);
-}
+    const patients = response.data?.data || [];
 
-const patient = patients[0];
+    console.log("PATIENTS FOUND:", patients.length);
 
-const name = splitName(patient.fullName);
+    if (patients.length === 0) {
+      return res.json([]);
+    }
 
-return res.json([
-{
-id: patient.uid,
-first_name: name.firstName,
-last_name: name.lastName,
-full_name: patient.fullName,
-phone: patient.phoneNumber,
-mobile: patient.secondaryPhoneNumber || "",
-email: patient.emailAddress || ""
-}
+    const patient = patients[0];
 
-]);
+    const name = splitName(patient.fullName);
 
-} catch (error) {
-
-console.error(
-
-"Yeastar Lookup Error:",
-
-error.response?.data || error.message
-);
-res.status(500).json({
-success: false,
-error: error.response?.data || error.message
-});
-}
-
-});
-``
+    return res.json([
+      {
+        id: patient.uid,
+        first_name: name.firstName,
+        last_name: name.lastName,
+        full_name: patient.fullName,
+        phone: patient.phoneNumber,
+        mobile: patient.secondaryPhoneNumber || "",
+        email: patient.emailAddress || ""
+      }
+    ]);
 
   } catch (error) {
 
@@ -269,7 +246,7 @@ error: error.response?.data || error.message
       error.response?.data || error.message
     );
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: error.response?.data || error.message
     });
@@ -280,7 +257,7 @@ error: error.response?.data || error.message
 
 /*
 |--------------------------------------------------------------------------
-| Optional CRM URL Endpoint
+| Contact URL Endpoint
 |--------------------------------------------------------------------------
 */
 
@@ -288,7 +265,14 @@ app.get("/yeastar/contacturl", async (req, res) => {
 
   try {
 
-    const phone = req.query.phone;
+    const phone = normaliseNumber(
+      req.query.phone ||
+      req.query.number ||
+      ""
+    );
+
+    console.log("CONTACTURL QUERY:", req.query);
+    console.log("CONTACTURL PHONE:", phone);
 
     if (!phone) {
       return res.status(400).json({
