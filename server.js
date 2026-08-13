@@ -129,7 +129,12 @@ app.get("/lookup", async (req, res) => {
 
   try {
 
-    const number = req.query.number;
+    const number = normaliseNumber(
+req.query.number ||
+req.query.phone ||
+""
+);
+``
 
     if (!number) {
       return res.status(400).json({
@@ -190,49 +195,72 @@ app.get("/lookup", async (req, res) => {
 */
 
 app.get("/yeastar/contact", async (req, res) => {
+console.log("=================================");
+console.log("YEASTAR REQUEST RECEIVED");
+console.log("QUERY:", req.query);
 
-  console.log("==== YEASTAR REQUEST ====");
-  console.log(req.query);
-  
-  try {
+try {
+const phone = normaliseNumber(
+req.query.phone ||
+req.query.number ||
+""
+);
 
-    const phone = req.query.phone || req.query.number;
+console.log("NORMALISED PHONE:", phone);
 
-    console.log("PHONE:", phone);
+if (!phone) {
+return res.status(400).json({
+error: "phone parameter required"
+});
+}
 
-    if (!phone) {
-      return res.status(400).json({
-        error: "phone parameter required"
-      });
-    }
+const response = await hearlink.get("/patients", {
+params: {
+phoneNumber: phone
+}
+});
 
-    const response = await hearlink.get("/patients", {
-      params: {
-        phoneNumber: phone
-      }
-    });
+const patients = response.data?.data || [];
 
-    const patients = response.data?.data || [];
+console.log("PATIENTS FOUND:", patients.length);
 
-    if (patients.length === 0) {
-      return res.json([]);
-    }
+if (patients.length === 0) {
+return res.json([]);
+}
 
-    const patient = patients[0];
+const patient = patients[0];
 
-    const name = splitName(patient.fullName);
+const name = splitName(patient.fullName);
 
-    return res.json([
-      {
-        id: patient.uid,
-        first_name: name.firstName,
-        last_name: name.lastName,
-        full_name: patient.fullName,
-        phone: patient.phoneNumber,
-        mobile: patient.secondaryPhoneNumber || "",
-        email: patient.emailAddress || ""
-      }
-    ]);
+return res.json([
+{
+id: patient.uid,
+first_name: name.firstName,
+last_name: name.lastName,
+full_name: patient.fullName,
+phone: patient.phoneNumber,
+mobile: patient.secondaryPhoneNumber || "",
+email: patient.emailAddress || ""
+}
+
+]);
+
+} catch (error) {
+
+console.error(
+
+"Yeastar Lookup Error:",
+
+error.response?.data || error.message
+);
+res.status(500).json({
+success: false,
+error: error.response?.data || error.message
+});
+}
+
+});
+``
 
   } catch (error) {
 
