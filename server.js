@@ -191,9 +191,14 @@ app.get("/lookup", async (req, res) => {
 
 app.get("/yeastar/contact", async (req, res) => {
 
+  console.log("==== YEASTAR REQUEST ====");
+  console.log(req.query);
+  
   try {
 
-    const phone = req.query.phone;
+    const phone = req.query.phone || req.query.number;
+
+    console.log("PHONE:", phone);
 
     if (!phone) {
       return res.status(400).json({
