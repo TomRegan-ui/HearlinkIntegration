@@ -257,6 +257,54 @@ app.get("/yeastar/contact", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
+| Yeastar Patients
+|--------------------------------------------------------------------------
+*/
+
+app.get("/yeastar/patients", async (req, res) => {
+
+  try {
+
+    const response = await hearlink.get("/patients");
+
+    const patients = response.data?.data || [];
+
+    const formattedPatients = patients.map(patient => {
+
+      const name = splitName(patient.fullName);
+
+      return {
+        id: patient.uid,
+        first_name: name.firstName,
+        last_name: name.lastName,
+        full_name: patient.fullName,
+        phone: patient.phoneNumber || "",
+        mobile: patient.secondaryPhoneNumber || "",
+        email: patient.emailAddress || ""
+      };
+
+    });
+
+    res.json(formattedPatients);
+
+  } catch (error) {
+
+    console.error(
+      "Yeastar Patients Error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      error: error.response?.data || error.message
+    });
+
+  }
+
+});
+
+/*
+|--------------------------------------------------------------------------
 | Contact URL Endpoint
 |--------------------------------------------------------------------------
 */
